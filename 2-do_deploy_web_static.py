@@ -1,48 +1,54 @@
 #!/usr/bin/python3
-"""Write a Fabric script that generates a .tgz
-archive from the contents of the web_static folder
-of your AirBnB Clone repo, using the function do_pack."""
+""" Transfers file from local to remote """
+from fabric.api import *
+import datetime
 
-from fabric.api import local, put, env, run
-from datetime import datetime
-from os.path import exists
 
-env.hosts = ['54.209.251.89', '54.147.180.101']
+env.use_ssh_config = True
+env.hosts = ['35.237.82.133', '35.196.231.32']
+env.user = 'ubuntu'
+env.key_filename = '~/.ssh/holberton'
+date = datetime.datetime.now().strftime("%Y%m%d%I%M%S")
+
+
+def transfer():
+    """ transfers a specific file """
+    put('./0-setup_web_static.sh', '/tmp/')
+
 
 def do_pack():
     """
-    function that create an archiv .tgz
+        Generates a .tgz archive from the contents of web_static folder
+        Return: the archive path if the archive has been correctly generated
+        Otherwise Return: None
     """
-    time = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-    local('mkdir -p versions')
-    file_name = 'versions/web_static_{}.tgz'.format(time)
-    try:
-        local('tar -czvf {} web_static'.format(file_name))
-        return file_name
-    except Exception:
-        return None
+    local("mkdir -p ./versions")
+    local("tar czvf ./versions/web_static_{}.tgz ./web_static/*".format(date))
+
 
 def do_deploy(archive_path):
-    """ The function do_deploy """
-    if not exists(archive_path):
-        return False
+    """ Distributes an archive to multiple webservers """
     try:
-        """archive_path = versions/web_static_20170315003959.tgz """
-        file_name = archive_path.split("/")[-1]
-        """file_name = web_static_20170315003959.tgz"""
-        file_with_no_ext = file_name.split(".")[0]
-        """file_with_no_ext = web_static_20170315003959"""
-        path = "/data/web_static/releases/"
-        """Upload the archive to the /tmp/ directory of the web server"""
+        if not archive_path:
+            return False
+        try:
+            name = archive_path.split('/')[-1]
+        except:
+            name = archive_path
+
         put(archive_path, '/tmp/')
-        run('mkdir -p {}{}/'.format(path, file_with_no_ext))
-        """Uncompress the archive"""
-        run('tar -xzf /tmp/{} -C {}{}/'.format(file_name, path, file_with_no_ext))
-        run('rm /tmp/{}'.format(file_name))
-        run('mv {0}{1}/web_static/* {0}{1}/'.format(path, file_with_no_ext))
-        run('rm -rf {}{}/web_static'.format(path, file_with_no_ext))
-        run('rm -rf /data/web_static/current')
-        run('ln -s {}{}/ /data/web_static/current'.format(path, file_with_no_ext))
+        run("mkdir -p /data/web_static/releases/{}/".format(name[:-4]))
+        with cd('/tmp/'):
+            run('tar xzf {} -C /data/web_static/releases/{}/'.format(name,
+                name[:-4]))
+            sudo('rm ./{}'.format(name))
+        with cd('/data/web_static/'):
+            run('mv releases/{}/web_static/*\
+                    /data/web_static/releases/{}/'
+                .format(name[:-4], name[:-4]))
+            run('rm -rf ./current')
+            run('ln -s /data/web_static/releases/{}/\
+                    /data/web_static/current'.format(name[:-4]))
         return True
-    except Exception:
+    except:
         return False

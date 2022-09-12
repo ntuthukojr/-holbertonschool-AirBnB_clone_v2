@@ -1,21 +1,26 @@
 #!/usr/bin/python3
-"""
-script that generates a .tgz archive from the contents of the web_static
-folder of your AirBnB Clone repo, using the function do_pack.
-"""
+""" Transfers file from local to remote """
+from fabric.api import *
+import datetime
 
-from fabric.api import local
-from datetime import datetime
+
+env.use_ssh_config = True
+env.hosts = ['35.237.82.133', '35.196.231.32']
+env.user = 'ubuntu'
+env.key_filename = '~/.ssh/holberton'
+date = datetime.datetime.now().strftime("%Y%m%d%I%M%S")
+
+
+def transfer():
+    """ transfers a specific file """
+    put('./0-setup_web_static.sh', '/tmp/')
+
 
 def do_pack():
     """
-    function that create an archiv .tgz
+        Generates a .tgz archive from the contents of web_static folder
+        Return: the archive path if the archive has been correctly generated
+        Otherwise Return: None
     """
-    time = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-    local('mkdir -p versions')
-    file_name = 'versions/web_static_{}.tgz'.format(time)
-    try:
-        local('tar -czvf {} web_static'.format(file_name))
-        return file_name
-    except Exception:
-        return None
+    local("mkdir -p ./versions")
+    local("tar czvf ./versions/web_static_{}.tgz ./web_static/*".format(date))

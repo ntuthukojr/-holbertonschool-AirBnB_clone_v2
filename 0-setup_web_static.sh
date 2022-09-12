@@ -1,13 +1,35 @@
 #!/usr/bin/env bash
-#script that sets up your web servers for the deployment of web_static
-
-if [ ! -x /usr/sbin/nginx ]; then
-    apt-get -y upgrade
-    apt-get -y install nginx
-fi
-
-mkdir -p /data/web_static/{releases/test,shared} && echo "<html><head></head><body><h1>hello world</h1></body></html>" > /data/web_static/releases/test/index.html
-ln -sf /data/web_static/releases/test/ /data/web_static/current
-chown -R ubuntu:ubuntu /data
-sed -i '/:80 default_server;/a \\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}' /etc/nginx/sites-available/default
-service nginx restart
+# Configures a new Ubuntu machine with nginx - 
+apt-get -y update && apt-get -y install nginx 
+mkdir -p /data/web_static/releases/test/
+mkdir -p /data/web_static/shared/
+echo "<html>
+  <head>
+  </head>
+  <body>
+    Holberton School
+  </body>
+</html>" | sudo tee /data/web_static/releases/test/index.html 
+ln -sf  /data/web_static/releases/test/ /data/web_static/current
+chown -R ubuntu:ubuntu /data/
+rm -f /etc/nginx/sites-enabled/default 
+echo -e "
+server {
+	listen 80 default_server;
+	root /data/;
+	index index.html index.htm;
+	add_header X-Served-By \$hostname;	
+	location / {
+		root /srv/www;
+		index index.html;
+	}
+	location /redirect_me {
+		return 301 https://www.youtube.com/watch?v=QH2-TGUlwu4;
+	}
+	location /hbnb_static {
+		alias /data/web_static/current;
+		index index.html;
+	}
+}" | sudo tee /etc/nginx/sites-available/www 
+ln -sf /etc/nginx/sites-available/www /etc/nginx/sites-enabled/ 
+sudo nginx -t && sudo service nginx restart

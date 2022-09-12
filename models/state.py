@@ -1,27 +1,35 @@
 #!/usr/bin/python3
-""" State Module for HBNB project """
+"""This is the state class"""
+
+import models
+import sqlalchemy
 from models.base_model import BaseModel, Base
 from models.city import City
-from models import storage
-from os import getenv
-from sqlalchemy import Column, String
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
+from os import environ
 
 
 class State(BaseModel, Base):
-    """ State class """
-    __tablename__ = "states"
+    """This is the class for State
+    Attributes:
+        name: input name
+    """
+
+    __tablename__ = 'states'
     name = Column(String(128), nullable=False)
-    if getenv("HBNB_TYPE_STORAGE") == "db":
-        cities = relationship("City", backref="state", cascade="all, delete",
-                              passive_deletes=True)
-    else:
+    cities = relationship("City", cascade="all, delete", backref="state")
+
+    if ('HBNB_TYPE_STORAGE' not in environ or
+            environ['HBNB_TYPE_STORAGE'] != 'db'):
+        """Conditional getters and setters for review and amenities
+            Only executed when file storage is being used
+        """
         @property
         def cities(self):
-            """returns the list of City instances"""
-            new_list = []
-            all_cities = storage.all(City)
-            for element in all_cities.values():
-                if self.id == element.state_id:
-                    new_list.append(element)
-            return new_list
+            """Returns the list of City instances with equal state_id"""
+            from models import storage
+            cities = storage.all(City)
+            self.__cities = [city for city in cities.values()
+                             if city.state_id == self.id]
+            return self.__cities
